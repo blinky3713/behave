@@ -1,0 +1,28 @@
+{
+  "name": "behave",
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "purescript-halogen": "^4.0.0",
+    "purescript-prelude": "^4.1.0",
+    "purescript-behaviors": "^7.0.0",
+    "purescript-event": "^1.2.4",
+    "purescript-datetime": "^4.1.0",
+    "purescript-drawing": "^4.0.0"
+  },
+  "dev-dependencies": {
+    "purescript-psci-support": "^4.0.0"
+  },
+  "devDependencies": {
+    "purescript-spec": "^3.1.0"
+  }
+}
