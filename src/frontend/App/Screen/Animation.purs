@@ -8,7 +8,7 @@ import App.Screen.Types (BoundingBox(..), Cartesian, Point(..), toCanvas, toCart
 import Data.DateTime.Instant (unInstant)
 import Data.Foldable (fold)
 import Data.Lens ((^.))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Newtype (over2)
 import Data.Set (Set)
 import Data.Time.Duration (Milliseconds(..))
@@ -28,12 +28,12 @@ import Graphics.Drawing (render)
 --------------------------------------------------------------------------------
 
 type GameState =
-  { ball :: Ball.Ball Cartesian
+  { ball :: Maybe (Ball.Ball Cartesian)
   , blocker :: Blocker.Blocker Cartesian
   }
 
 initialGameState :: {w :: Number, h :: Number} -> GameState
-initialGameState dims = { ball: Ball.initialBall dims
+initialGameState dims = { ball: Just $ Ball.initialBall dims
                         , blocker: Blocker.initialBlocker dims
                         }
 
@@ -52,7 +52,7 @@ animateBall canvas = do
         gameAnimation = unfold ($) (gameStates boundingBoxCartesian kb) (initialGameState {w,h})
     animate gameAnimation \gs -> do
       _ <- clearRect ctx {x: 0.0, y: 0.0, width: w, height: h}
-      let canvasBall = Ball.drawBall $ toCanvas boundingBoxCartesian gs.ball
+      let canvasBall = maybe mempty (Ball.drawBall <<< toCanvas boundingBoxCartesian) gs.ball
           canvasBlocker = Blocker.drawBlocker $ toCanvas boundingBoxCartesian gs.blocker
           drawing = fold [canvasBall, canvasBlocker]
       render ctx drawing
@@ -68,8 +68,9 @@ stepGameState
   -> GameState
   -> GameState
 stepGameState bb ks dt gs =
-  gs { ball = Ball.stepBall bb dt gs.ball
-     , blocker = Blocker.stepBlocker bb ks gs.blocker
+  let nextBlocker = Blocker.stepBlocker bb ks gs.blocker
+  in { ball: Ball.stepBall bb nextBlocker dt =<< gs.ball
+     , blocker: nextBlocker
      }
 
 gameStates
