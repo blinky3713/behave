@@ -4,10 +4,8 @@ import Prelude
 
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Lens (Lens, Lens', lens, (%~), (^.), to)
+import Data.Lens (Lens', lens, (^.), to)
 import Math (pow, sqrt)
-
-
 
 data Canvas
 data Cartesian
@@ -56,34 +54,6 @@ _y = lens (\(Point p) -> p.y) (\(Point p) y' -> Point p {y = y'})
 instance changeCoordinatesPoint :: ChangeCoordinates Point where
   toCanvas bbCart (Point p) = Point p {y = bbCart ^. _upperRight <<< _y - p.y}
   toCartesian bbCanv (Point p) = Point p {y = bbCanv ^. _lowerLeft <<< _y - p.y}
-
-newtype Ball c =
-  Ball { radius :: Number
-       , velocity :: Velocity
-       , position :: Point c
-       }
-
-derive instance genericBall :: Generic (Ball c) _
-
-instance showBall :: Show (Ball c) where
-  show = genericShow
-
-instance changeCoordinatesBall :: ChangeCoordinates Ball where
-  toCanvas bb ball = ball # _position %~ toCanvas bb
-  toCartesian bb ball = ball # _position %~ toCartesian bb
-
-
-_position :: forall c c'. Lens (Ball c) (Ball c') (Point c) (Point c')
-_position = lens (\(Ball b) -> b.position)
-                 (\(Ball b) p' -> Ball b {position = p'})
-
-_velocity :: forall c. Lens' (Ball c) Velocity
-_velocity = lens (\(Ball b) -> b.velocity)
-                 (\(Ball b) v' -> Ball b {velocity = v'})
-
-_radius :: forall c. Lens' (Ball c) Number
-_radius = lens (\(Ball b) -> b.radius)
-               (\(Ball b) r' -> Ball b {radius = r'})
 
 newtype BoundingBox c =
   BoundingBox { lowerLeft :: Point c

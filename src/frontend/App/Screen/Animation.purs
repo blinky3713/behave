@@ -2,8 +2,8 @@ module App.Screen.Animation (animateBall) where
 
 import Prelude
 
-import App.Screen.Ball (drawBall, initialBall, stepBall)
-import App.Screen.Types (Ball(..), BoundingBox(..), Point(..), _position, _radius, _velocity, toCanvas, toCartesian)
+import App.Screen.Ball as Ball
+import App.Screen.Types (BoundingBox(..), Point(..), toCanvas, toCartesian)
 import Data.DateTime.Instant (unInstant)
 import Data.Lens ((^.))
 import Data.Maybe (fromMaybe)
@@ -33,15 +33,14 @@ animateBall canvas = do
                                         , upperRight: Point {x: w, y: 0.0}
                                         }
         boundingBoxCartesian = toCartesian boundingBoxCanvas boundingBoxCanvas
-        ballAnimation = unfold (stepBall boundingBoxCartesian) deltaTimes (initialBall {w,h})
+        ballAnimation = unfold (Ball.stepBall boundingBoxCartesian) deltaTimes (Ball.initialBall {w,h})
     animate ballAnimation \ball -> do
-      C.log $ show ball
       _ <- clearRect ctx {x: 0.0, y: 0.0, width: w, height: h}
-      let canvasBall = Ball { position : toCanvas boundingBoxCartesian $ ball ^. _position
-                            , radius : ball ^. _radius
-                            , velocity : ball ^. _velocity
-                            }
-      render ctx (drawBall canvasBall)
+      let canvasBall = Ball.Ball { position : toCanvas boundingBoxCartesian $ ball ^. Ball._position
+                                 , radius : ball ^. Ball._radius
+                                 , velocity : ball ^. Ball._velocity
+                                 }
+      render ctx (Ball.drawBall canvasBall)
 
   where
 
