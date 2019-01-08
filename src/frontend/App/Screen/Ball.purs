@@ -2,6 +2,7 @@ module App.Screen.Ball where
 
 import Prelude
 
+import App.Screen.Constants as Constants
 import App.Screen.Types (class ChangeCoordinates, BoundingBox, Canvas, Cartesian, Point(..), Velocity(..), _lowerLeft, _speed, _upperRight, _vx, _vy, _x, _y, toCanvas, toCartesian)
 import Color.Scheme.MaterialDesign (blueGrey)
 import Data.Generic.Rep (class Generic)
@@ -42,8 +43,8 @@ drawBall :: Ball Canvas -> Drawing
 drawBall b = filled (fillColor blueGrey) $ circle (b ^. _position <<< _x) (b ^. _position <<< _y) (b ^. _radius)
 
 initialBall :: {w :: Number, h :: Number} -> Ball Cartesian
-initialBall dims = Ball { radius: 50.0
-                        , velocity: Velocity {direction: {x: 1.0, y: 2.0}, speed: 50.0}
+initialBall dims = Ball { radius: Constants.ballRadius
+                        , velocity: Velocity {direction: {x: 1.0, y: 2.0}, speed: Constants.ballSpeed}
                         , position: Point {x: dims.w / 2.0, y: dims.h / 2.0}
                         }
 
