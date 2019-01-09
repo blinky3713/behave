@@ -4,13 +4,15 @@ import Prelude
 
 import App.Screen.Blocker as Blocker
 import App.Screen.Constants as Constants
-import App.Screen.Types (class ChangeCoordinates, BoundingBox, Canvas, Cartesian, Point(..), Velocity(..), _lowerLeft, _speed, _upperRight, _vx, _vy, _x, _y, toCanvas, toCartesian)
+import App.Screen.Types (class ChangeCoordinates, BoundingBox, Canvas, Cartesian, Player(..), Point(..), Velocity(..), _lowerLeft, _speed, _upperRight, _vx, _vy, _x, _y, toCanvas, toCartesian)
 import Color.Scheme.MaterialDesign (blueGrey)
+import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Lens (Lens, Lens', lens, (%~), (+~), (.~), (^.))
 import Data.Maybe (Maybe(..))
 import Data.Time.Duration (Milliseconds(..))
+import Data.Tuple (Tuple(..))
 import Graphics.Drawing (Drawing, circle, fillColor, filled)
 
 newtype Ball c =
@@ -50,12 +52,13 @@ initialBall dims = Ball { radius: Constants.ballRadius
                         , position: Point {x: dims.w / 2.0, y: dims.h / 2.0}
                         }
 
+-- Return either the winner or the updated ball
 stepBall
   :: BoundingBox Cartesian
   -> Blocker.Blocker Cartesian
   -> Milliseconds
   -> Ball Cartesian
-  -> Maybe (Ball Cartesian)
+  -> Either Player (Ball Cartesian)
 stepBall bb blocker (Milliseconds dt) ball =
   let s = dt `div` 1000.0
       spd = ball ^. _velocity <<< _speed
@@ -66,41 +69,41 @@ stepBall bb blocker (Milliseconds dt) ball =
                    # _position <<< _y +~ translation.dy
   in adjustForBlocker blocker <<<  adjustForBoundingBox bb $ ball'
 
-
+-- TODO: use transformation + symmetry
 adjustForBlocker
   :: Blocker.Blocker Cartesian
   -> Ball Cartesian
-  -> Maybe (Ball Cartesian)
-adjustForBlocker blocker ball =
-  let maxX = ball ^. (_position <<< _x) + radiusB
-      radiusB = ball ^. _radius
-      centerY = ball ^. (_position <<< _y)
-      lowerY = blocker ^. Blocker._position <<< _y - blocker ^. Blocker._heightHalf
-      upperY = blocker ^. Blocker._position <<< _y + blocker ^. Blocker._heightHalf
-  in case maxX > (blocker ^. Blocker._position <<< _x), centerY <= upperY && centerY >= lowerY of
-       true, false -> Nothing
-       true, true ->
-         Just (ball # _position <<< _x .~ (blocker ^. Blocker._position ^. _x) - radiusB
-                    # (_velocity <<< _vx) %~ negate
-              )
-       false, _ -> Just ball
+  -> Either Player (Ball Cartesian)
+adjustForBlocker blocker@(Blocker.Blocker b) ball =
+    let maxX = ball ^. (_position <<< _x) + radiusB
+        minX = ball ^. (_position <<< _x) - radiusB
+        radiusB = ball ^. _radius
+        centerY = ball ^. (_position <<< _y)
+        lowerY = blocker ^. Blocker._position <<< _y - blocker ^. Blocker._heightHalf
+        upperY = blocker ^. Blocker._position <<< _y + blocker ^. Blocker._heightHalf
+        testBlocker1 = Tuple (minX < (blocker ^. Blocker._position <<< _x)) (centerY <= upperY && centerY >= lowerY)
+        testBlocker2 = Tuple (maxX > (blocker ^. Blocker._position <<< _x)) (centerY <= upperY && centerY >= lowerY)
+    in case b.playerId of
+         Player1 -> case testBlocker1 of
+           Tuple false _ -> Right ball
+           Tuple true false -> Left Player2
+           Tuple true true -> Right (ball # _position <<< _x .~ (blocker ^. Blocker._position ^. _x) + radiusB
+                                          # _velocity <<< _vx %~ negate
+                                    )
+         Player2 -> case testBlocker2 of
+           Tuple false _ -> Right ball
+           Tuple true false -> Left Player1
+           Tuple true true -> Right (ball # _position <<< _x .~ (blocker ^. Blocker._position ^. _x) - radiusB
+                                          # _velocity <<< _vx %~ negate
+                                    )
 
 adjustForBoundingBox
   :: BoundingBox Cartesian
   -> Ball Cartesian
   -> Ball Cartesian
 adjustForBoundingBox bb =
---    adjustForLeftWall >>> adjustForRightWall >>> adjustForBottomWall >>> adjustForTopWall
-    adjustForLeftWall >>> adjustForBottomWall >>> adjustForTopWall
+    adjustForBottomWall >>> adjustForTopWall
   where
-    adjustForLeftWall ball =
-      let minX = ball ^. (_position <<< _x) - radiusB
-          radiusB = ball ^. _radius
-      in if minX < bb ^. _lowerLeft <<< _x
-           then ball # _position <<< _x .~ (bb ^. _lowerLeft <<< _x) + radiusB
-                     # (_velocity <<< _vx)  %~ negate
-           else ball
-
     adjustForBottomWall ball =
       let minY = ball ^. (_position <<< _y) - radiusB
           radiusB = ball ^. _radius
@@ -108,14 +111,6 @@ adjustForBoundingBox bb =
            then ball # _position <<< _y .~ (bb ^. _lowerLeft <<< _y) + radiusB
                      # (_velocity <<< _vy)  %~ negate
            else ball
-
---    adjustForRightWall ball =
---      let maxX = ball ^. (_position <<< _x) + radiusB
---          radiusB = ball ^. _radius
---      in if maxX > bb ^. _upperRight <<< _x
---           then ball # _position <<< _x .~ (bb ^. _upperRight ^. _x) - radiusB
---                     # (_velocity <<< _vx) %~ negate
---           else ball
 
     adjustForTopWall ball =
       let maxY = ball ^. (_position <<< _y) + radiusB

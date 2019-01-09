@@ -3,7 +3,7 @@ module App.Screen.Blocker where
 import Prelude
 
 import App.Screen.Constants as Constants
-import App.Screen.Types (class ChangeCoordinates, BoundingBox, Canvas, Cartesian, Point(..), _lowerLeft, _upperRight, _x, _y, toCanvas, toCartesian)
+import App.Screen.Types (class ChangeCoordinates, BoundingBox, Canvas, Cartesian, Point(..), Player(..), _lowerLeft, _upperRight, _x, _y, toCanvas, toCartesian)
 import Color.Scheme.MaterialDesign (blueGrey)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
@@ -16,6 +16,7 @@ newtype Blocker c =
   Blocker { widthHalf :: Number
           , heightHalf :: Number
           , position :: Point c
+          , playerId :: Player
           }
 
 derive instance genericBlocker :: Generic (Blocker c) _
@@ -46,13 +47,34 @@ drawBlocker blocker = filled (fillColor blueGrey) $
             (blocker ^. _widthHalf * 2.0)
             (blocker ^. _heightHalf * 2.0)
 
-initialBlocker :: {w :: Number, h :: Number} -> Blocker Cartesian
-initialBlocker {w,h} = Blocker { widthHalf: Constants.blockerWidth
-                               , heightHalf: Constants.blockerHeight
-                               , position: Point { x: w - Constants.blockerWidth * 2.0
-                                                 , y: h / 2.0
-                                                 }
-                               }
+upKey :: forall c. Blocker c -> String
+upKey (Blocker b) = case b.playerId of
+  Player1 -> Constants.player1Up
+  Player2 -> Constants.player2Up
+
+downKey :: forall c. Blocker c -> String
+downKey (Blocker b) = case b.playerId of
+  Player1 -> Constants.player1Down
+  Player2 -> Constants.player2Down
+
+initialBlocker1 :: {w :: Number, h :: Number} -> Blocker Cartesian
+initialBlocker1 {w,h} = Blocker { widthHalf: Constants.blockerWidth
+                                , heightHalf: Constants.blockerHeight
+                                , position: Point { x: 0.0 + Constants.blockerWidth * 2.0
+                                                  , y: h / 2.0
+                                                  }
+                                , playerId: Player1
+                                }
+
+initialBlocker2 :: {w :: Number, h :: Number} -> Blocker Cartesian
+initialBlocker2 {w,h} = Blocker { widthHalf: Constants.blockerWidth
+                                , heightHalf: Constants.blockerHeight
+                                , position: Point { x: w - Constants.blockerWidth * 2.0
+                                                  , y: h / 2.0
+                                                  }
+                                , playerId: Player2
+                                }
+
 
 stepBlocker
   :: BoundingBox Cartesian
@@ -64,9 +86,9 @@ stepBlocker bb ks =
   where
     stepBlocker' :: Blocker Cartesian -> Blocker Cartesian
     stepBlocker' blocker
-      | "ArrowUp" `member` ks && "ArrowDown" `member` ks = blocker
-      | "ArrowUp" `member` ks = blocker # _position <<< _y +~ Constants.blockerSpeed
-      | "ArrowDown" `member` ks = blocker # _position <<< _y -~ Constants.blockerSpeed
+      | upKey blocker `member` ks && downKey blocker `member` ks = blocker
+      | upKey blocker `member` ks = blocker # _position <<< _y +~ Constants.blockerSpeed
+      | downKey blocker `member` ks = blocker # _position <<< _y -~ Constants.blockerSpeed
       | otherwise = blocker
 
 adjustForBoundingBox
@@ -80,12 +102,12 @@ adjustForBoundingBox bb =
       let minY = blocker ^. (_position <<< _y) - heightAdjust
           heightAdjust = blocker ^. _heightHalf
       in if minY < bb ^. _lowerLeft <<< _y
-         then blocker # _position <<< _y .~ (bb ^. _lowerLeft <<< _y)
+         then blocker # _position <<< _y .~ (bb ^. _lowerLeft <<< _y + heightAdjust)
          else blocker
 
     adjustForTopWall blocker =
       let maxY = blocker ^. (_position <<< _y) + heightAdjust
           heightAdjust = blocker ^. _heightHalf
       in if maxY > bb ^. _upperRight <<< _y
-         then blocker # _position <<< _y .~ (bb ^. _upperRight <<< _y)
+         then blocker # _position <<< _y .~ (bb ^. _upperRight <<< _y - heightAdjust)
          else blocker

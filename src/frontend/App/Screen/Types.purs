@@ -10,6 +10,13 @@ import Math (pow, sqrt)
 data Canvas
 data Cartesian
 
+data Player = Player1 | Player2
+
+instance showPlayer :: Show Player where
+  show p = case p of
+    Player1 -> "Player1"
+    Player2 -> "Player2"
+
 class ChangeCoordinates (f :: Type -> Type) where
   toCartesian :: BoundingBox Canvas -> f Canvas -> f Cartesian
   toCanvas :: BoundingBox Cartesian -> f Cartesian -> f Canvas
