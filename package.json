@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "webpack": "webpack --config webpack.config.js",
-    "build": "pulp build",
+    "build": "bower install; pulp build",
     "start:dev": "webpack-dev-server",
     "test": "node test.js"
   },
