@@ -6,7 +6,6 @@ install:
   - npm i
 script:
   - npm run build
-  - npm run test
   - npm run webpack
 deploy:
   provider: pages
